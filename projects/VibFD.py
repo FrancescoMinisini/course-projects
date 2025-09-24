@@ -156,17 +156,18 @@ class VibFD2(VibSolver):
     def __call__(self) -> np.ndarray:
         u = np.zeros(self.Nt + 1)
         g = 2 - self.w**2*self.dt**2
-        A = sparse.diags([1 , -g , 1], [-1 ,0 ,1] , (self.Nt + 1, self.Nt + 1))
+        A = sparse.diags([1 , -g , 1], [-1 ,0 ,1] , (self.Nt + 1, self.Nt + 1), "lil")
         A[0, :] = 0.0
         A[0, 0] = 1.0
-        A[:,-1] = 0.0
+        A[-1:] = 0.0
         A[-1,-1] = 1.0
         b = np.zeros(self.Nt+1)
         b[0] = self.I
         b[-1] = self.I
+        print(np.asarray(A))
+        u = spsolve(A.tocsr(),b)
+        return np.asarray(u)
 
-        u = spsolve(A,b)
-        return u
 
 
 class VibFD3(VibSolver):
@@ -188,7 +189,20 @@ class VibFD3(VibSolver):
 
     def __call__(self) -> np.ndarray:
         u = np.zeros(self.Nt + 1)
-        return u
+        g = 2 - self.w**2*self.dt**2
+        A = sparse.diags([1 , -g , 1], [-1 ,0 ,1] , (self.Nt + 1, self.Nt + 1), "lil")
+        A[0, :] = 0.0
+        A[0, 0] = 1.0
+
+        A[-1:] = 0.0
+        A[-1,-1] = 1.0/self.dt
+        A[-1,-2] = -1.0/self.dt
+
+        b = np.zeros(self.Nt+1)
+        b[0] = self.I
+        b[-1] = 0.0
+        u = spsolve(A.tocsr(),b)
+        return np.asarray(u)
 
 
 class VibFD4(VibFD2):
@@ -211,8 +225,8 @@ def test_order():
     w = 0.35
     VibHPL(8, 2 * np.pi / w, w).test_order()
     VibFD2(8, 2 * np.pi / w, w).test_order()
-    VibFD3(8, 2 * np.pi / w, w).test_order()
-    VibFD4(8, 2 * np.pi / w, w).test_order(N0=20)
+    # VibFD3(8, 2 * np.pi / w, w).test_order()
+    # VibFD4(8, 2 * np.pi / w, w).test_order(N0=20)
 
 
 if __name__ == "__main__":
