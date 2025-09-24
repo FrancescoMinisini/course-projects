@@ -159,12 +159,11 @@ class VibFD2(VibSolver):
         A = sparse.diags([1 , -g , 1], [-1 ,0 ,1] , (self.Nt + 1, self.Nt + 1), "lil")
         A[0, :] = 0.0
         A[0, 0] = 1.0
-        A[-1:] = 0.0
+        A[-1,:] = 0.0
         A[-1,-1] = 1.0
         b = np.zeros(self.Nt+1)
         b[0] = self.I
         b[-1] = self.I
-        print(np.asarray(A))
         u = spsolve(A.tocsr(),b)
         return np.asarray(u)
 
@@ -188,20 +187,23 @@ class VibFD3(VibSolver):
         assert T.is_integer() and T % 2 == 0
 
     def __call__(self) -> np.ndarray:
-        u = np.zeros(self.Nt + 1)
-        g = 2 - self.w**2*self.dt**2
-        A = sparse.diags([1 , -g , 1], [-1 ,0 ,1] , (self.Nt + 1, self.Nt + 1), "lil")
+        g = 2 - self.w**2 * self.dt**2
+
+        A = sparse.diags([1, -g, 1], [-1, 0, 1], (self.Nt + 1, self.Nt + 1), format="lil")
+
         A[0, :] = 0.0
         A[0, 0] = 1.0
 
-        A[-1:] = 0.0
-        A[-1,-1] = 1.0/self.dt
-        A[-1,-2] = -1.0/self.dt
+        A[-1, :]  = 0.0
+        A[-1, -3] = 1.0   
+        A[-1, -2] = -4.0  
+        A[-1, -1] = 3.0   
 
-        b = np.zeros(self.Nt+1)
-        b[0] = self.I
-        b[-1] = 0.0
-        u = spsolve(A.tocsr(),b)
+        b = np.zeros(self.Nt + 1)
+        b[0]  = self.I     
+        b[-1] = 0.0        
+
+        u = spsolve(A.tocsr(), b)
         return np.asarray(u)
 
 
@@ -225,7 +227,7 @@ def test_order():
     w = 0.35
     VibHPL(8, 2 * np.pi / w, w).test_order()
     VibFD2(8, 2 * np.pi / w, w).test_order()
-    # VibFD3(8, 2 * np.pi / w, w).test_order()
+    VibFD3(8, 2 * np.pi / w, w).test_order()
     # VibFD4(8, 2 * np.pi / w, w).test_order(N0=20)
 
 
