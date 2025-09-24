@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sympy as sp
 from scipy import sparse
+from scipy.sparse.linalg import spsolve
 
 t = sp.Symbol("t")
 
@@ -156,7 +157,15 @@ class VibFD2(VibSolver):
         u = np.zeros(self.Nt + 1)
         g = 2 - self.w**2*self.dt**2
         A = sparse.diags([1 , -g , 1], [-1 ,0 ,1] , (self.Nt + 1, self.Nt + 1))
-        u = A @ self.t
+        A[0, :] = 0.0
+        A[0, 0] = 1.0
+        A[:,-1] = 0.0
+        A[-1,-1] = 1.0
+        b = np.zeros(self.Nt+1)
+        b[0] = self.I
+        b[-1] = self.I
+
+        u = spsolve(A,b)
         return u
 
 
