@@ -43,30 +43,46 @@ class Wave1D:
         self.un = np.zeros(N + 1)
         self.unm1 = np.zeros(N + 1)
 
-    def D2(self, bc: int) -> sparse.spmatrix:
+    def D2(self, bc: dict[str:int]) -> sparse.spmatrix:
         """Return second order differentiation matrix
 
         Paramters
         ---------
         bc : int
             Boundary condition
-
+            - 0 Dirichlet
+            - 1 Neumann
+            - 2 Open boundary
+            - 3 periodic
         Note
         ----
         The returned matrix is not divided by dx**2
         """
         D = sparse.diags([1, -2, 1], [-1, 0, 1], (self.N + 1, self.N + 1), "lil")
-        if bc == 1:  # Neumann condition is baked into stencil
-            raise NotImplementedError
+        
+        if bc == 0: #dirichlet
+            D[0, :] , D[-1, : ] = 0.0 , 0.0
+        
+        elif bc == 1:  # Neumann condition is baked into stencil
+            # skew stencil for newmann bound cond
+            coeff = [-2 , 2]
+
+            D[0, :] = 0.0
+            D[0 , 0:2] = coeff
+
+            D[-1, : ] = 0.0
+            D[0 , 0:2] = coeff[::-1]
+
+            return D
 
         elif bc == 3:  # periodic (Note u[0] = u[-1])
             raise NotImplementedError
 
         return D
 
-    def apply_bcs(self, bc: int, u: np.ndarray | None = None):
+    def apply_bcs(self, bc: dict[str:int], u: np.ndarray | None = None):
         """Apply boundary conditions to solution vector
-
+        
         Parameters
         ----------
         bc : int
@@ -81,21 +97,41 @@ class Wave1D:
 
         """
         u = u if u is not None else self.unp1
-        if bc == 0:  # Dirichlet condition
-            u[0] = 0
-            u[-1] = 0
+        left = bc["left"] 
+        right = bc["right"]
+        if left == 2 or right == 2:
+            C = float(self.cfl)
+            un   = self.un      # u^n
+            unm1 = self.unm1    # u^{n-1}
 
-        elif bc == 1:  # Neumann condition
+        if  left == 0:
+            u[0] = 0.0
+        elif left == 1:
             pass
+        elif left == 2:
+            u[0] = (
+                2.0 * (1.0 - 0.5 * C**2) * un[0]
+                - (1.0 - C) / (1.0 + C) * unm1[0]
+                + (2.0 * C**2) / (1.0 + C) * un[1]
+            )
+        elif left == 3 or right ==3:
+            if left == 3 and right == 3:
+                u[-1] = u[0] 
+            else: raise  RuntimeError(f"Periodic bound cond cannot be mixed bc = [left : {left} , right : {right}]")
+        else: raise RuntimeError(f"Wrong bc =  [left : {left} , right : {right}]")
 
-        elif bc == 2:  # Open boundary
-            raise NotImplementedError
-
-        elif bc == 3:
-            raise NotImplementedError
-
+        if  right == 0:
+            u[-1] = 0.0
+        elif right == 1:
+            pass
+        elif right == 2:
+            u[-1] = (
+                2.0 * (1.0 - 0.5 * C**2) * un[-1]
+                - (1.0 - C) / (1.0 + C) * unm1[-1]
+                + (2.0 * C**2) / (1.0 + C) * un[-2]
+            )
         else:
-            raise RuntimeError(f"Wrong bc = {bc}")
+            raise RuntimeError(f"Wrong bc =  [left : {left} , right : {right}]")
 
     @property
     def dt(self) -> float:
