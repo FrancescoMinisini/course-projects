@@ -85,8 +85,6 @@ class Wave1D:
             D[-1 , -2:] = coeff[::-1]
         elif right == 2:
             pass
-        elif right == 3:
-            pass
         else: raise RuntimeError(f"Wrong bc =  [left : {left} , right : {right}]")
         
         return D
@@ -131,7 +129,9 @@ class Wave1D:
             )
         else: raise RuntimeError(f"Wrong bc =  [left : {left} , right : {right}]")
 
-        if  right == 0:
+        if right == 3:
+            pass
+        elif  right == 0:
             u[-1] = 0.0
         elif right == 1:
             pass
@@ -141,8 +141,6 @@ class Wave1D:
                 - (1.0 - C) / (1.0 + C) * unm1[-1]
                 + (2.0 * C**2) / (1.0 + C) * un[-2]
             )
-        elif right == 3:
-            pass
         else:
             raise RuntimeError(f"Wrong bc =  [left : {left} , right : {right}]")
 
@@ -262,7 +260,7 @@ def test_pulse_bcs():
     assert np.linalg.norm(data[0] - data[100]) < 1e-12
     data = sol(100, bc= {"left" : 2 , "right" : 2}, ic=0, save_step=100)
     assert np.linalg.norm(data[100]) < 1e-12
-    data = sol(100, bc=2, ic= {"left" : 2 , "right" : 2}, save_step=100)
+    data = sol(100, bc={"left" : 2 , "right" : 2}, ic= 1, save_step=100)
     assert np.linalg.norm(data[100]) < 1e-12
     data = sol(100, bc= {"left" : 3, "right" : 3}, ic=0, save_step=100)
     assert np.linalg.norm(data[0] - data[100]) < 1e-12
