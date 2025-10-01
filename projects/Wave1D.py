@@ -43,7 +43,7 @@ class Wave1D:
         self.un = np.zeros(N + 1)
         self.unm1 = np.zeros(N + 1)
 
-    def D2(self, bc: dict[str:int]) -> sparse.spmatrix:
+    def D2(self, bc: dict[str, int]) -> sparse.spmatrix:
         """Return second order differentiation matrix
 
         Paramters
@@ -60,27 +60,38 @@ class Wave1D:
         """
         D = sparse.diags([1, -2, 1], [-1, 0, 1], (self.N + 1, self.N + 1), "lil")
         
-        if bc == 0: #dirichlet
-            D[0, :] , D[-1, : ] = 0.0 , 0.0
+        coeff = [-2 , 2]
         
-        elif bc == 1:  # Neumann condition is baked into stencil
-            # skew stencil for newmann bound cond
-            coeff = [-2 , 2]
-
+        left =bc["left"]
+        right = bc["right"]
+        if left == 3 and right == 3:
+            D[0, -1] = 1.0
+            D[-1, 0] = 1.0
+        elif left == 3 or right == 3:
+            raise RuntimeError(f"Periodic bound cond cannot be mixed bc = [left:{left}, right:{right}]")
+        elif left == 0:
+            D[0, :] = 0.0
+        elif left == 1:
             D[0, :] = 0.0
             D[0 , 0:2] = coeff
-
+        elif left == 2:
+            pass
+        else: raise RuntimeError(f"Wrong bc =  [left : {left} , right : {right}]")
+        
+        if right == 0:
+            D[-1, :] = 0.0
+        elif right == 1:
             D[-1, : ] = 0.0
-            D[0 , 0:2] = coeff[::-1]
-
-            return D
-
-        elif bc == 3:  # periodic (Note u[0] = u[-1])
-            raise NotImplementedError
-
+            D[-1 , -2:] = coeff[::-1]
+        elif right == 2:
+            pass
+        elif right == 3:
+            pass
+        else: raise RuntimeError(f"Wrong bc =  [left : {left} , right : {right}]")
+        
         return D
 
-    def apply_bcs(self, bc: dict[str:int], u: np.ndarray | None = None):
+    def apply_bcs(self, bc: dict[str, int], u: np.ndarray | None = None):
         """Apply boundary conditions to solution vector
         
         Parameters
@@ -99,12 +110,16 @@ class Wave1D:
         u = u if u is not None else self.unp1
         left = bc["left"] 
         right = bc["right"]
-        if left == 2 or right == 2:
-            C = float(self.cfl)
-            un   = self.un      # u^n
-            unm1 = self.unm1    # u^{n-1}
+        
+        C = float(self.cfl)
+        un   = self.un      # u^n
+        unm1 = self.unm1    # u^{n-1}
 
-        if  left == 0:
+        if left == 3 or right ==3:
+            if left == 3 and right == 3:
+                u[-1] = u[0] 
+            else: raise  RuntimeError(f"Periodic bound cond cannot be mixed bc = [left : {left} , right : {right}]")
+        elif  left == 0:
             u[0] = 0.0
         elif left == 1:
             pass
@@ -114,10 +129,6 @@ class Wave1D:
                 - (1.0 - C) / (1.0 + C) * unm1[0]
                 + (2.0 * C**2) / (1.0 + C) * un[1]
             )
-        elif left == 3 or right ==3:
-            if left == 3 and right == 3:
-                u[-1] = u[0] 
-            else: raise  RuntimeError(f"Periodic bound cond cannot be mixed bc = [left : {left} , right : {right}]")
         else: raise RuntimeError(f"Wrong bc =  [left : {left} , right : {right}]")
 
         if  right == 0:
@@ -130,6 +141,8 @@ class Wave1D:
                 - (1.0 - C) / (1.0 + C) * unm1[-1]
                 + (2.0 * C**2) / (1.0 + C) * un[-2]
             )
+        elif right == 3:
+            pass
         else:
             raise RuntimeError(f"Wrong bc =  [left : {left} , right : {right}]")
 
@@ -141,7 +154,7 @@ class Wave1D:
         self,
         Nt: int,
         cfl: Number | None = None,
-        bc: int = 0,
+        bc: dict[str , int] = {"left" : 0, "right" : 0},
         ic: int = 0,
         save_step: int = 100,
     ) -> dict[int, np.ndarray]:
@@ -239,27 +252,28 @@ class Wave1D:
 
 def test_pulse_bcs():
     sol = Wave1D(100, cfl=1, L0=2, c0=1)
-    data = sol(100, bc=0, ic=0, save_step=100)
+    data = sol(100, bc= {"left" : 0 , "right" : 0}, ic=0, save_step=100)
     assert np.linalg.norm(data[0] + data[100]) < 1e-12
-    data = sol(100, bc=0, ic=1, save_step=100)
+    data = sol(100, bc= {"left" : 0 , "right" : 0}, ic=1, save_step=100)
     assert np.linalg.norm(data[0] + data[100]) < 1e-12
-    data = sol(100, bc=1, ic=0, save_step=100)
+    data = sol(100, bc= {"left" : 1 , "right" : 1}, ic=0, save_step=100)
     assert np.linalg.norm(data[0] - data[100]) < 1e-12
-    data = sol(100, bc=1, ic=1, save_step=100)
+    data = sol(100, bc= {"left" : 1 , "right" : 1}, ic=1, save_step=100)
     assert np.linalg.norm(data[0] - data[100]) < 1e-12
-    data = sol(100, bc=2, ic=0, save_step=100)
+    data = sol(100, bc= {"left" : 2 , "right" : 2}, ic=0, save_step=100)
     assert np.linalg.norm(data[100]) < 1e-12
-    data = sol(100, bc=2, ic=1, save_step=100)
+    data = sol(100, bc=2, ic= {"left" : 2 , "right" : 2}, save_step=100)
     assert np.linalg.norm(data[100]) < 1e-12
-    data = sol(100, bc=3, ic=0, save_step=100)
+    data = sol(100, bc= {"left" : 3, "right" : 3}, ic=0, save_step=100)
     assert np.linalg.norm(data[0] - data[100]) < 1e-12
-    data = sol(100, bc=3, ic=1, save_step=100)
+    data = sol(100, bc={"left" : 3, "right" : 3}, ic=1, save_step=100)
     assert np.linalg.norm(data[0] - data[100]) < 1e-12
 
 
 if __name__ == "__main__":
-    # sol = Wave1D(100, cfl=1, L0=2, c0=1)
-    # data = sol(100, bc=3, save_step=1, ic=1)
-    # sol.animation(data)
-    test_pulse_bcs()
+    bc = {"left" : 3 , "right" : 3}
+    sol = Wave1D(100, cfl=1, L0=2, c0=1)
+    data = sol(Nt = 100, bc = bc, save_step=3, ic=0)
+    sol.animation(data)
+    # test_pulse_bcs()
     # data = sol(200, bc=2, ic=0, save_step=100)
