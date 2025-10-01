@@ -65,13 +65,15 @@ class Wave1D:
         left =bc["left"]
         right = bc["right"]
         if left == 3 and right == 3:
-            D[0, :] = 0.0
-            D[0, 0] = -2.0
-            D[0, 1] = 1.0
-
-            D[-1 ,:] = 0.0
-            D[-1 ,-1] = -2.0
-            D[-1 ,-2] = 1.0
+            D[0, :]  = 0.0
+            D[0, 0]  = -2.0
+            D[0, 1]  =  1.0
+            D[0, -1] =  1.0
+        
+            D[-1, :]  = 0.0
+            D[-1, -1] = -2.0
+            D[-1, -2] =  1.0
+            D[-1, 0]  =  1.0
 
         elif left == 3 or right == 3:
             raise RuntimeError(f"Periodic bound cond cannot be mixed bc = [left:{left}, right:{right}]")
@@ -130,11 +132,7 @@ class Wave1D:
         elif left == 1:
             pass
         elif left == 2:
-            u[0] = (
-                2.0 * (1.0 - 0.5 * C**2) * un[0]
-                - (1.0 - C) / (1.0 + C) * unm1[0]
-                + (2.0 * C**2) / (1.0 + C) * un[1]
-            )
+            u[0] = 2.0*(1.0 - C)*un[0] - ((1.0 - C)/(1.0 + C))*unm1[0] + (2.0*C**2/(1.0 + C))*un[1]
         else: raise RuntimeError(f"Wrong bc =  [left : {left} , right : {right}]")
 
         if right == 3:
@@ -144,11 +142,7 @@ class Wave1D:
         elif right == 1:
             pass
         elif right == 2:
-            u[-1] = (
-                2.0 * (1.0 - 0.5 * C**2) * un[-1]
-                - (1.0 - C) / (1.0 + C) * unm1[-1]
-                + (2.0 * C**2) / (1.0 + C) * un[-2]
-            )
+            u[-1] = 2.0*(1.0 - C)*un[-1] - ((1.0 - C)/(1.0 + C))*unm1[-1] + (2.0*C**2/(1.0 + C))*un[-2]
         else:
             raise RuntimeError(f"Wrong bc =  [left : {left} , right : {right}]")
 
