@@ -68,12 +68,11 @@ class Wave1D:
             D[0, :]  = 0.0
             D[0, 0]  = -2.0
             D[0, 1]  =  1.0
-            D[0, -1] =  1.0
-        
+            D[0, -2] =  1.0
+
             D[-1, :]  = 0.0
             D[-1, -1] = -2.0
             D[-1, -2] =  1.0
-            D[-1, 0]  =  1.0
 
         elif left == 3 or right == 3:
             raise RuntimeError(f"Periodic bound cond cannot be mixed bc = [left:{left}, right:{right}]")
@@ -266,7 +265,7 @@ def test_pulse_bcs():
     assert np.linalg.norm(data[100]) < 1e-12
     data = sol(100, bc= {"left" : 3, "right" : 3}, ic=0, save_step=100)
     assert np.linalg.norm(data[0] - data[100]) < 1e-12
-    data = sol(100, bc={"left" : 3, "right" : 3}, ic=1, save_step=100)
+    data = sol(100, bc= {"left" : 3, "right" : 3}, ic=1, save_step=100)
     assert np.linalg.norm(data[0] - data[100]) < 1e-12
 
 
