@@ -3,6 +3,8 @@ import sympy as sp
 import matplotlib.pyplot as plt
 import scipy.sparse as sparse
 from sympy.utilities.lambdify import implemented_function
+import sympy as sy
+
 
 x = sp.Symbol('x')
 
@@ -113,7 +115,32 @@ class Poisson:
         return np.sqrt(self.dx*np.sum((uj-u)**2))
 
 def test_poisson():
-    assert False
+    L = 1.
+    ue = sp.sin(2*sp.pi*x/L) + sp.cos(3*sp.pi*x/L) + sp.exp(sp.sin(x/L))
+    f = sp.diff(ue, x, 2) 
+    Ns = [25, 50, 100, 200]
+    errors = []
+    for N in Ns:
+        sol = Poisson(L=L)
+        bc = (ue.subs(x, 0.0), ue.subs(x, L))
+        u = sol(N, bc=bc, f=f)  # solve
+        e = sol.l2_error(u, ue)
+        errors.append(float(e))
+
+        # Also: boundary values should match Dirichlet BCs closely
+        assert np.isclose(u[0], float(bc[0]), atol=1e-10)
+        assert np.isclose(u[-1], float(bc[1]), atol=1e-10)
+    rates = []
+    for i in range(len(errors) - 1):
+        if errors[i+1] == 0:  # guard (shouldn't happen)
+            continue
+        p = np.log(errors[i] / errors[i+1]) / np.log(2.0)
+        rates.append(p)
+        assert all(p > 1.8 for p in rates), f"Observed orders too low: {rates}"
+
+    # And ensure the finest-grid error is small
+    assert errors[-1] < 5e-4, f"Error on finest grid too large: {errors[-1]}"
+
 
 if __name__ == '__main__':
     L = 2
